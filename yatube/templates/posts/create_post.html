@@ -1,0 +1,41 @@
+<!-- templates/posts/sreate_post.html -->
+
+{% extends "base.html" %}
+{% block title %}
+{% if not is_edit %}
+Новый пост
+{% else %}
+Редактировать пост
+{% endif %}
+{% endblock %}
+{% block content %}
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 p-5">
+        <div class="card">
+          <div class="card-header">       
+            {% if not is_edit %}
+              Добавить запись
+            {% else %}
+              Редактировать запись
+            {% endif %}            
+          </div>
+          <div class="card-body">
+            {% include 'includes/form.html' %}
+                          
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">
+                  {% if not is_edit %}
+                    Добавить
+                  {% else %}
+                    Сохранить
+                  {% endif %}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

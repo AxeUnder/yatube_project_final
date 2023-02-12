@@ -1,0 +1,27 @@
+<!-- templates/posts/contact.html -->
+
+{% extends "base.html" %}
+{% block title %}Письмо{% endblock %}
+{% block content %}
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 p-5">
+        <div class="card">
+          <div class="card-header">
+            Письмо администратору
+          </div>
+          <div class="card-body">
+            {% include 'includes/form.html' %}
+
+              <div class="col-md-6 offset-md-4">
+                <button type="submit" class="btn btn-primary">
+                  Отправить
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>  
+{% endblock %}
