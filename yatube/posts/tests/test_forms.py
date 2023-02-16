@@ -6,11 +6,13 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.conf import settings
-
+from django.core.cache import cache
 
 from http import HTTPStatus
 
-from posts.models import Post, Group
+from posts.models import Post
+
+from .factories import post_create, group_create, user_create
 
 
 User = get_user_model()
@@ -23,7 +25,7 @@ class PostCreateFormTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='Aleksey')
+        cls.user = user_create('Aleksey')
         cls.small_gif = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
             b'\x01\x00\x80\x00\x00\x00\x00\x00'
@@ -37,14 +39,9 @@ class PostCreateFormTests(TestCase):
             content=cls.small_gif,
             content_type='image/gif'
         )
-        cls.group = Group.objects.create(
-            title='Группа по интересам',
-            slug='slug',
-            description='Описание группы',
-        )
-        cls.post = Post.objects.create(
+        cls.group = group_create(slug='group')
+        cls.post = post_create(
             author=cls.user,
-            text='Пост пользователя',
             group=cls.group,
             image=cls.uploaded
         )
@@ -57,6 +54,7 @@ class PostCreateFormTests(TestCase):
     def setUp(self):
         self.authorized_client = Client()
         self.authorized_client.force_login(PostCreateFormTests.user)
+        cache.clear()
 
     def test_create_post(self):
         """Валидная форма создает запись в Post."""

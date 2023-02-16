@@ -9,6 +9,7 @@
   <div class="container py-5">
     <h1>Все посты пользователя {{ profile.get_full_name }}</h1>
     <h3>Всего постов: {{ user_posts.count }} </h3>
+    <h3>Всего подписчиков: {{ user_follower.count }} </h3>
     {% if user != profile and user.is_authenticated and page_obj %}
       {% if following %}
         <a

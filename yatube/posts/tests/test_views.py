@@ -2,7 +2,6 @@
 import shutil
 import tempfile
 
-
 from django.test import Client, TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth import get_user_model
@@ -11,9 +10,12 @@ from django.conf import settings
 from django.core.cache import cache
 from django import forms
 
-from posts.models import Post, Group, Comment, Follow
+from posts.models import Post, Comment, Follow
+
+from .factories import post_create, group_create, user_create
 
 from http import HTTPStatus
+
 
 User = get_user_model()
 
@@ -25,7 +27,7 @@ class PostViewsTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.auth = User.objects.create_user(username='auth')
+        cls.auth = user_create('auth')
         cls.small_gif = (
             b'\x47\x49\x46\x38\x39\x61\x02\x00'
             b'\x01\x00\x80\x00\x00\x00\x00\x00'
@@ -39,23 +41,14 @@ class PostViewsTests(TestCase):
             content=cls.small_gif,
             content_type='image/gif'
         )
-        cls.group = Group.objects.create(
-            title='Группа по интересам',
-            slug='slug',
-            description='Описание',
-        )
+        cls.group = group_create()
 
-        cls.i = 0
-
-        while cls.i < 13:
-            if cls.i < 13:
-                cls.post = Post.objects.create(
-                    author=cls.auth,
-                    text='Пост',
-                    group=cls.group,
-                    image=cls.uploaded
-                )
-                cls.i += 1
+        for i in range(13):
+            cls.post = post_create(
+                author=cls.auth,
+                group=cls.group,
+                image=cls.uploaded
+            )
 
     @classmethod
     def tearDownClass(cls):
@@ -130,7 +123,7 @@ class PostViewsTests(TestCase):
         response = self.auth_client.get(reverse('posts:index'))
         first_object = response.context['page_obj'][0]
         page_values = {
-            first_object.text: 'Пост',
+            first_object.text: self.post.text,
             first_object.author: self.auth,
             first_object.group: self.group,
             first_object.image: self.post.image
@@ -145,13 +138,13 @@ class PostViewsTests(TestCase):
             'posts:group_list', kwargs=self.kwargs_slug))
         first_object = response.context['page_obj'][0]
         group_context = response.context['group']
-        self.assertEqual(first_object.text, 'Пост')
+        self.assertEqual(first_object.text, self.post.text)
         self.assertEqual(first_object.author, self.auth)
         self.assertEqual(first_object.group, self.group)
         self.assertEqual(first_object.image, self.post.image)
-        self.assertEqual(group_context.title, 'Группа по интересам')
-        self.assertEqual(group_context.slug, 'slug')
-        self.assertEqual(group_context.description, 'Описание')
+        self.assertEqual(group_context.title, self.group.title)
+        self.assertEqual(group_context.slug, self.group.slug)
+        self.assertEqual(group_context.description, self.group.description)
 
     def test_profile_url_contains_post(self):
         """В шаблон profile передается профиль пользователя (см `setUp`)"""
@@ -161,11 +154,11 @@ class PostViewsTests(TestCase):
         first_object = response.context['page_obj'][0]
         user_object = response.context['user_posts'][0]
         user = response.context['username']
-        self.assertEqual(first_object.text, 'Пост')
+        self.assertEqual(first_object.text, self.post.text)
         self.assertEqual(first_object.author, self.auth)
         self.assertEqual(first_object.group, self.group)
         self.assertEqual(first_object.image, self.post.image)
-        self.assertEqual(user_object.text, 'Пост')
+        self.assertEqual(user_object.text, self.post.text)
         self.assertEqual(user_object.author, self.auth)
         self.assertEqual(user_object.group, self.group)
         self.assertEqual(user_object.image, self.post.image)
@@ -177,7 +170,7 @@ class PostViewsTests(TestCase):
             'posts:post_detail', kwargs=self.kwargs_id
         ))
         post_object = response.context['post_detail'][0]
-        self.assertEqual(post_object.text, 'Пост')
+        self.assertEqual(post_object.text, self.post.text)
         self.assertEqual(post_object.author, self.auth)
         self.assertEqual(post_object.group, self.group)
         self.assertEqual(post_object.image, self.post.image)
@@ -206,27 +199,22 @@ class CommentViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.author = User.objects.create_user(username='author')
+        cls.author = user_create('author')
         cls.author_client = Client()
         cls.author_client.force_login(cls.author)
 
-        cls.group = Group.objects.create(
-            title='group',
-            slug='slug',
-            description='description'
-        )
+        cls.group = group_create()
 
-        cls.post = Post.objects.create(
-            text='post',
+        cls.post = post_create(
             group=cls.group,
             author=cls.author
         )
 
     def setUp(self):
-        self.user = User.objects.create_user(username='user')
+        self.user = user_create('user')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
-        self.kwargs_post = {'post_id': '1'}
+        self.kwargs_post = {'post_id': self.post.id}
 
     def test_add_comment_for_guest(self):
         """Не авторизованный пользователь не может оставить комментарий"""
@@ -271,16 +259,11 @@ class CacheViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='user')
+        cls.user = user_create('user')
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
-        cls.group = Group.objects.create(
-            title='group',
-            slug='slug',
-            description='description'
-        )
-        cls.post = Post.objects.create(
-            text='post',
+        cls.group = group_create()
+        cls.post = post_create(
             group=cls.group,
             author=cls.user
         )
@@ -290,7 +273,7 @@ class CacheViewsTest(TestCase):
         """Хранение и очищение кэша для index"""
         response = CacheViewsTest.authorized_client.get(reverse('posts:index'))
         posts = response.content
-        Post.objects.create(
+        post_create(
             text='new_post',
             author=self.user
         )
@@ -311,17 +294,16 @@ class FollowViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='user')
+        cls.user = user_create('user')
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
-        cls.unfol = User.objects.create_user(username='unfol')
+        cls.unfol = user_create('unfol')
         cls.unfol_client = Client()
         cls.unfol_client.force_login(cls.unfol)
-        cls.author = User.objects.create_user(username='author')
+        cls.author = user_create('author')
         cls.auth_client = Client()
         cls.auth_client.force_login(cls.author)
-        cls.post = Post.objects.create(
-            text='Текст',
+        cls.post = post_create(
             author=cls.author
         )
 
@@ -345,26 +327,17 @@ class FollowViewsTest(TestCase):
         self.assertTrue(follower)
 
     def test_post_author_for_followers(self):
-        """Новая запись автора появляется в ленте тех, кто на него подписан и
-        не появляется в ленте тех, кто не подписан"""
+        """Новая запись автора появляется в ленте тех, кто на него подписан"""
         FollowViewsTest.authorized_client.get(
             reverse('posts:profile_follow', kwargs=self.kwargs_author)
         )
         response = FollowViewsTest.authorized_client.get(
             reverse('posts:follow_index')
         )
-        response_unfol = FollowViewsTest.unfol_client.get(
-            reverse('posts:follow_index')
-        )
         page = response.context.get('page_obj').object_list
-        page_unfol = response_unfol.context.get('page_obj').object_list
         self.assertEqual(len(response.context.get('page_obj').object_list), 1)
         self.assertIn(FollowViewsTest.post, page)
-        self.assertEqual(len(
-            response_unfol.context.get('page_obj').object_list
-        ), 0)
-        self.assertNotIn(FollowViewsTest.post, page_unfol)
-        Post.objects.create(
+        post_create(
             text='Hi!',
             author=FollowViewsTest.author
         )
@@ -372,15 +345,31 @@ class FollowViewsTest(TestCase):
         response_new = FollowViewsTest.authorized_client.get(
             reverse('posts:follow_index')
         )
-        response_unfol_new = FollowViewsTest.unfol_client.get(
-            reverse('posts:follow_index')
-        )
         page_new = response_new.context.get('page_obj').object_list
-        page_unfol_new = response_unfol_new.context.get('page_obj').object_list
         self.assertEqual(len(
             response_new.context.get('page_obj').object_list
         ), 2)
         self.assertIn(FollowViewsTest.post, page_new)
+
+    def test_post_author_for_unfollowers(self):
+        """Новая запись автора не появляется в ленте тех, кто не подписан"""
+        response_unfol = FollowViewsTest.unfol_client.get(
+            reverse('posts:follow_index')
+        )
+        page_unfol = response_unfol.context.get('page_obj').object_list
+        self.assertEqual(len(
+            response_unfol.context.get('page_obj').object_list
+        ), 0)
+        self.assertNotIn(FollowViewsTest.post, page_unfol)
+        post_create(
+            text='Hi!',
+            author=FollowViewsTest.author
+        )
+        cache.clear()
+        response_unfol_new = FollowViewsTest.unfol_client.get(
+            reverse('posts:follow_index')
+        )
+        page_unfol_new = response_unfol_new.context.get('page_obj').object_list
         self.assertEqual(len(
             response_unfol_new.context.get('page_obj').object_list
         ), 0)

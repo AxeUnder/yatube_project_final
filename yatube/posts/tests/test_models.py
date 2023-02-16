@@ -1,7 +1,9 @@
 # posts/tests/tests_models.py
 from django.test import TestCase
-from posts.models import Group, Post
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
+
+from .factories import post_create, group_create, user_create
 
 
 User = get_user_model()
@@ -11,29 +13,30 @@ class PostModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='auth')
-        cls.group = Group.objects.create(
+        cls.user = user_create('auth')
+        cls.group = group_create(
             title='Группа по интересам',
             slug='слаг',
             description='Описание группы',
         )
-        cls.post = Post.objects.create(
+        cls.post = post_create(
             author=cls.user,
             text='Пост',
+
         )
-        cls.long_post = Post.objects.create(
+        cls.long_post = post_create(
             author=cls.user,
             text='Не более 15 символов может уместиться в превью'
         )
 
+    def setUp(self):
+        cache.clear()
+
     def test_models_have_object_names_contains_post_and_group(self):
         """У моделей корректно работает __str__(см `setUpClass`)"""
-        group = PostModelTest.group
-        post = PostModelTest.post
-        long_post = PostModelTest.long_post
-        self.assertEqual(str(group), 'Группа по интересам')
-        self.assertEqual(str(post), 'Пост')
-        self.assertEqual(str(long_post), 'Не более 15 сим')
+        self.assertEqual(str(self.group), 'Группа по интересам')
+        self.assertEqual(str(self.post), 'Пост')
+        self.assertEqual(str(self.long_post), 'Не более 15 сим')
 
     def test_verbose_name(self):
         """verbose_name в полях совпадает с Post."""

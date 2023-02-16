@@ -4,10 +4,10 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.cache import cache
 
-
 from http import HTTPStatus
 
-from posts.models import Post, Group
+from .factories import post_create, group_create, user_create
+
 
 User = get_user_model()
 
@@ -16,20 +16,13 @@ class PostURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.auth = User.objects.create_user(username='auth')
+        cls.auth = user_create('auth')
 
-        cls.group = Group.objects.create(
-            title='группа',
-            slug='slug',
-            description='описание',
-        )
-        cls.post = Post.objects.create(
-            author=cls.auth,
-            text='пост',
-        )
+        cls.group = group_create()
+        cls.post = post_create(author=cls.auth)
 
     def setUp(self):
-        self.user = User.objects.create_user(username='Ivan')
+        self.user = user_create('Ivan')
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         self.auth_client = Client()
@@ -80,7 +73,7 @@ class PostURLTests(TestCase):
         """URL-адрес использует соответствующий шаблон"""
         templates_url_names = {
             '/': 'posts/index.html',
-            '/group/slug/': 'posts/group_list.html',
+            f'/group/{PostURLTests.group.slug}/': 'posts/group_list.html',
             f'/profile/{PostURLTests.auth.username}/': 'posts/profile.html',
             f'/posts/{PostURLTests.post.id}/': 'posts/post_detail.html',
             f'/posts/{PostURLTests.post.id}/edit/': 'posts/create_post.html',

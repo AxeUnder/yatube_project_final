@@ -15,7 +15,7 @@ from .utils import paginator
 @cache_page(60 * 20)
 def index(request):
     template = 'posts/index.html'
-    posts_list = Post.objects.all()
+    posts_list = Post.objects.all().select_related('author')
     page_obj = paginator(request, posts_list, 10)
     context = {
         'page_obj': page_obj
@@ -39,6 +39,9 @@ def profile(request, username):
     template = 'posts/profile.html'
     profile = get_object_or_404(User, username=username)
     user_posts = profile.posts.all()
+    user_follower = Follow.objects.filter(
+        author=profile
+    )
     page_obj = paginator(request, user_posts, 10)
     following = request.user.is_authenticated and \
         Follow.objects.filter(
@@ -50,7 +53,8 @@ def profile(request, username):
         'user_posts': user_posts,
         'page_obj': page_obj,
         'username': username,
-        'following': following
+        'following': following,
+        'user_follower': user_follower
     }
     return render(request, template, context)
 
@@ -170,11 +174,11 @@ def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
     if author == request.user:
         return redirect('posts:profile', username=username)
-    follower = Follow.objects.filter(
+    follower, follower_new = Follow.objects.get_or_create(
         user=request.user,
         author=author
-    ).exists()
-    if follower is True:
+    )
+    if follower or follower_new is True:
         return redirect('posts:profile', username=username)
     Follow.objects.create(user=request.user, author=author)
     return redirect('posts:profile', username=username)
