@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_page
-# from django.core.cache import cache
+from django.core.cache import cache
 # from django.urls import reverse_lazy
 # from django.views.generic import CreateView
 
@@ -17,6 +17,7 @@ def index(request):
     template = 'posts/index.html'
     posts_list = Post.objects.all().select_related('author')
     page_obj = paginator(request, posts_list, 10)
+    cache.clear()
     context = {
         'page_obj': page_obj
     }
