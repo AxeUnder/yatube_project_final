@@ -24,4 +24,4 @@ class ChangeForm(PasswordChangeForm):
 
 class ResetForm(PasswordResetForm):
     model = User
-    fields = ('email')
+    fields = ('email',)
