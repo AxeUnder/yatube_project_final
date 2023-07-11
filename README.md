@@ -1,4 +1,4 @@
-# yatube_project
+# yatube_project_final
 ## Описание
 Социальная сеть блогеров.
 ## Технологии
