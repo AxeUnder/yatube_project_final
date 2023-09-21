@@ -15,14 +15,7 @@ DEBUG = os.getenv('DEBUG') == 'True'
 
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '[::1]',
-    'testserver',
-    'www.dazzline.pythonanywhere.com',
-    'dazzline.pythonanywhere.com',
-]
+ALLOWED_HOSTS = os.environ['ALLOWED_HOSTS'].split(',')
 
 CACHES = {
     'default': {
